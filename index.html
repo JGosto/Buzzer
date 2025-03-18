@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Buzzer</title>
+  <title>Jeu TV - Buzzer</title>
   <style>
     /* Corps de la page */
     body {
@@ -11,8 +11,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      /* 1) Couleur de fond initiale changée en #AAAAFF */
-      background-color: #AAAAFF;
+      background-color: #AAAAFF; /* Fond initial */
       color: white;
       font-size: 6rem; /* Titre principal */
       font-family: Arial, sans-serif;
@@ -91,7 +90,6 @@
       font-size: 0.85rem;
       font-family: inherit;
       text-align: left;
-
       appearance: none;
       -webkit-appearance: none;
       -moz-appearance: none;
@@ -164,6 +162,19 @@
     #display {
       transition: color 0.5s, background-color 0.5s;
     }
+
+    /* Image devant l'écran principal (z-index:50), max dimension, invisible to pointer events */
+    #overlayImage {
+      position: absolute;
+      z-index: 50;
+      pointer-events: none;
+      max-width: 80vw;
+      max-height: 80vh;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      /* onerror => si le fichier n'est pas trouvé, l'image disparaît */
+    }
   </style>
 </head>
 <body>
@@ -184,9 +195,10 @@
           <option value="4">4</option>
         </select>
       </label>
+      <!-- 1) Titre par défaut : champ vide ("") -->
       <label>
         <span>Titre</span>
-        <input type="text" id="titleInput" value="Question pour un prévôtois !">
+        <input type="text" id="titleInput" value="">
       </label>
       <label>
         <span>Fond</span>
@@ -199,6 +211,11 @@
       <label>
         <span>Vitesse [s]</span>
         <input type="number" id="vitesse" value="3" min="0" max="10" step="0.1">
+      </label>
+      <!-- Option grisée pour l'image (nom du fichier .png) -->
+      <label>
+        <span>Image</span>
+        <input type="text" id="imageFile" class="readonly" readonly value="img0.png">
       </label>
     </div>
 
@@ -329,17 +346,25 @@
     <button id="validateButton" class="menu-button">Valider</button>
   </div>
 
-  <!-- Palette de couleurs -->
+  <!-- L'image devant l'écran principal (si pas trouvée => onerror, hide) -->
+  <img 
+    id="overlayImage" 
+    src="img0.png" 
+    alt="" 
+    onerror="this.style.display='none';"
+  />
+
+  <!-- Palette -->
   <div id="colorPalette">
     <div class="swatch-container" id="swatchContainer"></div>
   </div>
 
-  <!-- Titre principal -->
-  <div id="display">Question pour un prévôtois !</div>
+  <!-- Titre principal (désormais vide par défaut) -->
+  <div id="display"></div>
 
   <script>
     /***********************************************************
-     * 1) Variables globales
+     * 1) Variables globales (unique let gameEnded)
      ***********************************************************/
     const paletteColors = [
       "#000000","#FF0000","#FFA500","#FFFF00","#00FF00","#00FFFF","#0000FF","#FF00FF",
@@ -349,25 +374,21 @@
     ];
 
     let nbPlayers        = 2;
-    let titleText        = "Question pour un prévôtois !";
-    // 1) Couleur de fond initiale #AAAAFF
+    // 1) Titre par défaut : champ vide
+    let titleText        = ""; 
     let displayBgColor   = "#AAAAFF";
-    // On laisse le texte en blanc
     let displayTextColor = "#ffffff";
     let vitesseMs        = 3000;
 
     let currentColorContext = "bg"; 
-
-    // 2) Couleur de fond des joueurs
     let playerBgColors   = ["#FF0000","#0000FF","#00FF00","#FF00FF"];
-    // Couleurs de texte => toutes blanches
     let playerTextColors = ["white","white","white","white"];
     let playerNames      = ["Joueur 1","Joueur 2","Joueur 3","Joueur 4"];
     let playerButtons    = [0,1,2,3];
     let playerKeys       = ["A","L","Q","P"];
 
-    // On ne redéclare pas gameEnded deux fois => UNE SEULE FOIS
     let gameEnded = false;
+
     let gamepads  = {};
 
     /***********************************************************
@@ -449,8 +470,6 @@
       }
       closeColorPalette();
     }
-
-    // Fermer la palette si clic ailleurs
     document.addEventListener("click",(evt)=>{
       const palette= document.getElementById("colorPalette");
       if(palette.style.display==="block"){
@@ -466,7 +485,7 @@
     document.getElementById("validateButton").addEventListener("click", saveSettings);
     function saveSettings() {
       nbPlayers= parseInt(document.getElementById("nbPlayers").value)||1;
-      titleText= document.getElementById("titleInput").value;
+      titleText= document.getElementById("titleInput").value; // champ vide par défaut
       let vitSec= parseFloat(document.getElementById("vitesse").value)||0;
       if(vitSec<0) vitSec=0; if(vitSec>10) vitSec=10;
       vitesseMs= vitSec*1000;
@@ -476,19 +495,22 @@
       document.body.style.backgroundColor= displayBgColor;
       document.getElementById("display").style.color= displayTextColor;
 
-      // Joueurs
+      // Joueur 1
       playerNames[0]   = document.getElementById("player1Name").value;
       playerButtons[0] = parseInt(document.getElementById("player1Button").value)||0;
       playerKeys[0]    = document.getElementById("player1Key").value.toUpperCase().charAt(0);
 
+      // Joueur 2
       playerNames[1]   = document.getElementById("player2Name").value;
       playerButtons[1] = parseInt(document.getElementById("player2Button").value)||1;
       playerKeys[1]    = document.getElementById("player2Key").value.toUpperCase().charAt(0);
 
+      // Joueur 3
       playerNames[2]   = document.getElementById("player3Name").value;
       playerButtons[2] = parseInt(document.getElementById("player3Button").value)||2;
       playerKeys[2]    = document.getElementById("player3Key").value.toUpperCase().charAt(0);
 
+      // Joueur 4
       playerNames[3]   = document.getElementById("player4Name").value;
       playerButtons[3] = parseInt(document.getElementById("player4Button").value)||3;
       playerKeys[3]    = document.getElementById("player4Key").value.toUpperCase().charAt(0);
@@ -573,18 +595,24 @@
     });
     function handlePress(playerIndex){
       gameEnded=true;
+      // On cache l'image
+      document.getElementById("overlayImage").style.display="none";
+
       // Couleurs du joueur
       document.body.style.backgroundColor= playerBgColors[playerIndex];
       document.getElementById("display").style.color= playerTextColors[playerIndex];
       // Titre= nom du joueur
       document.getElementById("display").textContent= playerNames[playerIndex];
-      // Jouer un son 
+
       let audio= new Audio(`son${playerIndex+1}.mp3`);
       audio.play();
       setTimeout(resetGame, vitesseMs);
     }
     function resetGame(){
       gameEnded=false;
+      // On restaure l'image
+      document.getElementById("overlayImage").style.display="block";
+
       document.body.style.backgroundColor= displayBgColor;
       document.getElementById("display").style.color= displayTextColor;
       document.getElementById("display").textContent= titleText;
